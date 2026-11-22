@@ -249,3 +249,4 @@ pub enum VotingError {
     #[msg("Vote count overflow.")]
     VoteCountOverflow,
 }
+
