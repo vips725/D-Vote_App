@@ -71,6 +71,11 @@ pub mod voting {
         let candidate = &mut ctx.accounts.candidate_account;
 
         let current_time = Clock::get()?.unix_timestamp;
+        let vote_record = &mut ctx.accounts.vote_record_account;
+
+    vote_record.voter = ctx.accounts.signer.key();
+    vote_record.poll_id = poll_id;
+    vote_record.candidate_index = candidate_index;  
 
         require!(
             current_time >= poll.poll_voting_start,
@@ -122,8 +127,6 @@ pub struct InitPoll<'info> {
 
     pub system_program: Program<'info, System>,
 }
-
-
 // CREATE CANDIDATE
 #[derive(Accounts)]
 #[instruction(poll_id: u64, candidate_index: u64)]
@@ -164,6 +167,7 @@ pub struct InitCandidate<'info> {
 #[instruction(poll_id: u64, candidate_index: u64)]
 pub struct Vote<'info> {
 
+    #[account(mut)]
     pub signer: Signer<'info>,
 
     #[account(
@@ -185,6 +189,21 @@ pub struct Vote<'info> {
         bump
     )]
     pub candidate_account: Account<'info, CandidateAccount>,
+
+    #[account(
+        init,
+        payer = signer,
+        space = 8 + VoteRecordAccount::INIT_SPACE,
+        seeds = [
+            b"vote_record_account",
+            poll_id.to_le_bytes().as_ref(),
+            signer.key().as_ref()
+        ],
+        bump
+    )]
+    pub vote_record_account: Account<'info, VoteRecordAccount>,
+
+    pub system_program: Program<'info, System>,
 }
 
 
@@ -208,6 +227,17 @@ pub struct PollAccount {
     pub poll_voting_end: i64,
 
     pub poll_option_index: u64,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct VoteRecordAccount {
+
+    pub poll_id: u64,
+
+    pub candidate_index: u64,
+
+    pub voter: Pubkey,
 }
 
 
